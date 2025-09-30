@@ -20,7 +20,7 @@ class CtoData:
         url_point = f"{self.base_url}{self.path_getpoint}{point_id}"
         header = {"Token": self.token}
 
-        data = await self.req.get(url_point, headers=header, timeout=60)
+        data = await self.req.get(url_point, headers=header)
         if data.get("error"):
             print(f"Erro ao validar porta PON: {data['message']}")
             return True
@@ -38,37 +38,38 @@ class CtoData:
 
         return results[0].get("box_id")
     
-    async def get_client_signal_status(self, client_id: str, service_hsi: str) -> dict:
-        url = f"{self.base_url}{self.path_client}{client_id}"
+    async def get_client_signal_status(self, client_id: str, service_hsi: str, box_id: str = None) -> dict:
         header = {"Token": self.token}
+        code_box = box_id
 
-        data = await self.req.get(url, headers=header)
-        if data.get("error"):
-            return f"Erro ao obter dados do cliente: {data['message']}"
-        
-        results = data.get('results', [])
-        code_box = None
-        if len(results) == 1:
-            code_box = results[0].get("box_id")
-            if service_hsi:
-                cod_srv_hsi = results[0].get("point", {}).get("attributes", {}).get("cod_srv_hsi")
-                if cod_srv_hsi != str(service_hsi):
-                    code_box = None
-        elif service_hsi:
-            for cto in results:
-                cod_srv_hsi = cto.get("point", {}).get("attributes", {}).get("cod_srv_hsi")
-                if cod_srv_hsi == str(service_hsi):
-                    code_box = cto.get("box_id")
-                    break
-        
-        if not code_box and results:
-            code_box = results[0].get("box_id")
+        if not code_box:
+            url = f"{self.base_url}{self.path_client}{client_id}"
+            data = await self.req.get(url, headers=header)
+            if data.get("error"):
+                return f"Erro ao obter dados do cliente: {data['message']}"
+            
+            results = data.get('results', [])
+            if len(results) == 1:
+                code_box = results[0].get("box_id")
+                if service_hsi:
+                    cod_srv_hsi = results[0].get("point", {}).get("attributes", {}).get("cod_srv_hsi")
+                    if cod_srv_hsi != str(service_hsi):
+                        code_box = None
+            elif service_hsi:
+                for cto in results:
+                    cod_srv_hsi = cto.get("point", {}).get("attributes", {}).get("cod_srv_hsi")
+                    if cod_srv_hsi == str(service_hsi):
+                        code_box = cto.get("box_id")
+                        break
+            
+            if not code_box and results:
+                code_box = results[0].get("box_id")
 
         if not code_box:
             return {"error": True, "message": "Nenhum CTO/Box ID encontrado para o cliente."}
         
         url_box = f"{self.base_url}{self.path_getbox}{code_box}"
-        data_box = await self.req.get(url_box, headers=header, timeout=60)
+        data_box = await self.req.get(url_box, headers=header)
 
         if data_box.get("error"):
             return f"Erro ao obter dados da box: {data_box['message']}"
@@ -76,13 +77,19 @@ class CtoData:
         points = data_box.get("result", {}).get("points", [])
         for point in points:
             attributes = point.get("attributes", {})
-            if client_id in attributes.get("cod_cli_active", "").split('/') or \
-                    (service_hsi and str(service_hsi) == attributes.get("cod_srv_hsi")):
-                return {
-                    "box_id": code_box,
-                    "verified_signal": point.get("verified_signal"),
-                    "status_name": point.get("status_name")
-                }
+            is_active_client = client_id in attributes.get("cod_cli_active", "").split('/')
+            is_opportunity_client = str(client_id) == attributes.get("cod_opportunity")
+
+            if is_active_client or is_opportunity_client:
+                service_matches = not service_hsi or (str(service_hsi) == attributes.get("cod_srv_hsi"))
+                
+                if service_matches:
+                    return {
+                        "box_id": code_box,
+                        "verified_signal": point.get("verified_signal"),
+                        "status_name": point.get("status_name")
+                    }
+
         return {"error": True, "message": "Sinal não encontrado para o cliente na box especificada."}
     
     async def process_check(self, client_id: str, service_hsi: str, user) -> dict:
@@ -94,7 +101,7 @@ class CtoData:
 
         try:
             url_reserva = f"{self.base_url}{self.path_reservation}{client_id}"
-            reservas_data = await self.req.get(url_reserva, headers=header, timeout=60)
+            reservas_data = await self.req.get(url_reserva, headers=header)
             
             for res in reservas_data.get("results", []):
                 if res.get("status_id") == 4 and (not service_hsi or res.get("attributes", {}).get("cod_srv_hsi") == service_hsi):
@@ -110,9 +117,9 @@ class CtoData:
                     box_name = box_info.get("box_full_name", "CTO desconhecida")
                     point_name = res.get("point_name", "Ponto desconhecido")
                     message = f"Reserva encontrada na CTO <b>{box_name}</b>, porta <b>{point_name}</b>."
-                    client_status_info = await self.get_client_signal_status(client_id, service_hsi)
+                    client_status_info = await self.get_client_signal_status(client_id, service_hsi, box_id=box_id)
                     signal_str = f"{client_status_info.get('verified_signal')} dBm\n" if client_status_info.get("verified_signal") else ""
-                    status_str = f"{client_status_info.get('status_name')}\n" if client_status_info.get("status_name") else ""
+                    status_str = res.get("status_name", "") + "\n" if res.get("status_name") else ""
 
                     keyboard = [[{"text": f"Ver Detalhes da CTO {box_name}", "callback_data": f"cto_full_{box_id}"}]] if box_id else []
                     
@@ -122,7 +129,7 @@ class CtoData:
                     }
 
             url_client = f"{self.base_url}{self.path_client}{client_id}"
-            client_data = await self.req.get(url_client, headers=header, timeout=60)
+            client_data = await self.req.get(url_client, headers=header)
             results_cliente = client_data.get("results", [])
 
             if not results_cliente:

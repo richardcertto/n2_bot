@@ -44,7 +44,7 @@ class RequestsMethods:
             logging.exception(f"Erro inesperado '{type(e).__name__}' durante a requisição para {url}")
             return {"error": True, "message": "Ocorreu um erro inesperado."}
 
-    async def get(self, url, headers=None, timeout=15, retries=3, delay=3):
+    async def get(self, url, headers=None, timeout=20, retries=3, delay=2):
         for attempt in range(retries):
             start_time = time.time()
             try:
@@ -66,7 +66,7 @@ class RequestsMethods:
             "message": f"A requisição excedeu o número máximo de {retries} tentativas devido a timeouts."
         }
         
-    async def post(self, url, headers=None, json=None, timeout=15, retries=3, delay=3):
+    async def post(self, url, headers=None, json=None, timeout=20, retries=3, delay=2):
         for attempt in range(retries):
             start_time = time.time()
             try:
