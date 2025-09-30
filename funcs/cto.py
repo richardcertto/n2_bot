@@ -187,4 +187,3 @@ class CtoData:
         except Exception as e:
             logging.exception(f"Erro ao processar a verificação CTO para o cliente {client_id}: {e}")
             return {"message": "⚠️ Ocorreu um erro inesperado. Tente novamente mais tarde."}
-
