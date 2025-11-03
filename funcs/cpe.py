@@ -23,6 +23,11 @@ class CpeStatus:
 
         try:
             result = await self.req.get(url)
+
+            if result.get("error"):
+                logging.error(f"Falha na requisição para a API de CPE: {result.get('message')}")
+                return msg.client_status_error()
+            
             result_data = result.get("Result", {})
             status_code = result_data.get("code")
 

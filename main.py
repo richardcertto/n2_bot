@@ -91,9 +91,6 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.effective_message.reply_text(message, parse_mode="HTML")
 
 async def sobreaviso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not await is_user_authorized(update, context):
-        return
-    
     wait_message = await update.effective_message.reply_text(
         text="⏳ Processando sua solicitação, aguarde...",
         parse_mode="HTML"

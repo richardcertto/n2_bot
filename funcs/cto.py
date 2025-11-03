@@ -116,7 +116,6 @@ class CtoData:
                     box_id = box_info.get("box_id")
                     box_name = box_info.get("box_full_name", "CTO desconhecida")
                     point_name = res.get("point_name", "Ponto desconhecido")
-                    message = f"Reserva encontrada na CTO <b>{box_name}</b>, porta <b>{point_name}</b>."
                     client_status_info = await self.get_client_signal_status(client_id, service_hsi, box_id=box_id)
                     signal_str = f"{client_status_info.get('verified_signal')} dBm\n" if client_status_info.get("verified_signal") else ""
                     status_str = res.get("status_name", "") + "\n" if res.get("status_name") else ""
@@ -124,7 +123,7 @@ class CtoData:
                     keyboard = [[{"text": f"Ver Detalhes da CTO {box_name}", "callback_data": f"cto_full_{box_id}"}]] if box_id else []
                     
                     return {
-                        "message": msg_handler.mensagem_cto_data().format(cli=client_id, serv=service_hsi or "N/A", signal=signal_str, status=status_str, msg=message),
+                        "message": msg_handler.mensagem_cto_data().format(cli=client_id, serv=service_hsi or "N/A", signal=signal_str, status=status_str, cto=box_name, point=point_name),
                         "reply_markup": {"inline_keyboard": keyboard}
                     }
 
@@ -165,8 +164,7 @@ class CtoData:
 
                 box_id_cliente = target_service_data.get("box_id")
                 box_name_cliente = target_service_data.get("box_full_name", "CTO desconhecida")
-                message = f"{box_name_cliente}"
-
+                point_name = target_service_data.get("point", {}).get("point_name", "Ponto desconhecido")
                 client_status_info = await self.get_client_signal_status(client_id, service_hsi)
                 signal_str = f"{client_status_info.get('verified_signal')} dBm\n" if client_status_info.get("verified_signal") else ""
                 status_str = f"{client_status_info.get('status_name')}\n" if client_status_info.get("status_name") else ""
@@ -174,7 +172,7 @@ class CtoData:
                 keyboard = [[{"text": f"Ver Detalhes da CTO {box_name_cliente}", "callback_data": f"cto_full_{box_id_cliente}"}]] if box_id_cliente else []
                 
                 return {
-                    "message": msg_handler.mensagem_cto_data().format(cli=client_id, serv=service_hsi or "N/A", signal=signal_str, status=status_str, msg=message),
+                    "message": msg_handler.mensagem_cto_data().format(cli=client_id, serv=service_hsi or "N/A", signal=signal_str, status=status_str, cto=box_name_cliente, point=point_name),
                     "reply_markup": {"inline_keyboard": keyboard}
                 }
 

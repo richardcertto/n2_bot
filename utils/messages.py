@@ -183,7 +183,8 @@ class BotMessage:
             "<b>📡 Serviço:</b> {serv}\n"
             "<b>💡 λ base:</b> {signal}"
             "<b>📌 Status:</b> {status}"
-            "<b>📝 CTO:</b> {msg}"
+            "<b>📝 CTO:</b> {cto}\n"
+            "<b>🔌 Saída:</b> {point}"
         )
     
     def build_message_cto(self, result: dict, cpe_status: dict = None) -> str:
